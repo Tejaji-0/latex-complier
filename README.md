@@ -291,17 +291,236 @@ If you encounter any issues or have questions, please:
 4. Check the browser console for JavaScript errors
 5. Create a new issue on GitHub with detailed information about your problem
 
-## Contributing
+## Deployment
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+### 🚀 Vercel Deployment (Recommended)
 
-## License
+Vercel provides excellent support for Flask applications. Here's how to deploy your LaTeX Editor:
 
-This project is open source and available under the [MIT License](LICENSE).
+#### Prerequisites for Vercel
+- Vercel account (free tier available)
+- Git repository (GitHub, GitLab, or Bitbucket)
+
+#### Step 1: Prepare for Vercel
+
+1. **Create a `vercel.json` file** in your project root:
+
+```json
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "main.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "main.py"
+    }
+  ],
+  "env": {
+    "PYTHONPATH": "."
+  }
+}
+```
+
+2. **Update your `main.py`** to work with Vercel:
+
+```python
+# Add this at the end of main.py
+if __name__ == "__main__":
+    app.run(debug=False)  # Set debug=False for production
+
+# For Vercel, also add:
+# This allows Vercel to import the app
+app = app
+```
+
+3. **Create `requirements.txt`** (if not exists):
+
+```txt
+Flask==2.3.3
+Pillow==10.0.1
+PyMuPDF==1.23.8
+Werkzeug==2.3.7
+requests==2.31.0
+```
+
+#### Step 2: Deploy to Vercel
+
+**Option A: Vercel CLI**
+```bash
+# Install Vercel CLI
+npm install -g vercel
+
+# Login to Vercel
+vercel login
+
+# Deploy
+vercel
+
+# For production deployment
+vercel --prod
+```
+
+**Option B: GitHub Integration (Recommended)**
+1. Push your code to GitHub
+2. Go to [vercel.com](https://vercel.com) and sign in
+3. Click "New Project"
+4. Import your GitHub repository
+5. Vercel will automatically detect the Python app
+6. Click "Deploy"
+
+#### Step 3: Configure Environment Variables
+
+In your Vercel dashboard:
+1. Go to Project Settings → Environment Variables
+2. Add any required environment variables
+3. Redeploy if needed
+
+#### Limitations on Vercel
+- **LaTeX Compilation**: Vercel's serverless environment doesn't include LaTeX by default
+- **File Storage**: Serverless functions have limited file system access
+- **AI Features**: Ollama won't work on Vercel (serverless limitation)
+
+**Recommended Workarounds:**
+- Use a LaTeX compilation service (like LaTeX.Online API)
+- Store user files in external storage (AWS S3, etc.)
+- Use cloud-based AI services (OpenAI API) instead of local Ollama
+
+### 🐳 Docker Deployment
+
+For full functionality including LaTeX compilation:
+
+1. **Create `Dockerfile`**:
+
+```dockerfile
+FROM python:3.9-slim
+
+# Install LaTeX
+RUN apt-get update && apt-get install -y \
+    texlive-latex-base \
+    texlive-latex-extra \
+    texlive-fonts-recommended \
+    texlive-fonts-extra \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY . .
+
+EXPOSE 5000
+
+CMD ["python", "main.py"]
+```
+
+2. **Deploy to various platforms**:
+
+```bash
+# Build and run locally
+docker build -t latex-editor .
+docker run -p 5000:5000 latex-editor
+
+# Deploy to Railway
+railway up
+
+# Deploy to Render
+# (Connect your GitHub repo to Render)
+
+# Deploy to DigitalOcean App Platform
+# (Use their web interface or doctl CLI)
+```
+
+### ☁️ Alternative Deployment Platforms
+
+#### Railway
+- **Pros**: Supports Docker, persistent storage, databases
+- **Setup**: Connect GitHub repo, Railway auto-detects Dockerfile
+- **Cost**: Free tier with limitations, paid plans available
+
+#### Render
+- **Pros**: Easy Docker deployment, free tier, automatic SSL
+- **Setup**: Connect GitHub, configure build settings
+- **Dockerfile**: Required for LaTeX support
+
+#### Heroku
+- **Pros**: Mature platform, add-ons ecosystem
+- **Setup**: Use buildpacks for Python + LaTeX
+- **Note**: No longer has a free tier
+
+#### DigitalOcean App Platform
+- **Pros**: Full control, scalable, competitive pricing
+- **Setup**: Deploy via GitHub or Docker registry
+
+#### AWS/Azure/GCP
+- **Pros**: Full enterprise features, highly scalable
+- **Setup**: Use container services (ECS, Container Apps, Cloud Run)
+
+### 🔧 Production Configuration
+
+#### Environment Variables
+```bash
+FLASK_ENV=production
+SECRET_KEY=your-secret-key-here
+LATEX_PATH=/usr/bin/pdflatex
+AI_SERVICE_URL=your-ai-service-endpoint
+```
+
+#### Security Considerations
+- Set `debug=False` in production
+- Use environment variables for sensitive data
+- Implement proper authentication if needed
+- Configure CORS for API endpoints
+- Use HTTPS (most platforms provide this automatically)
+
+#### Performance Optimization
+- Use a production WSGI server (Gunicorn):
+  ```bash
+  pip install gunicorn
+  gunicorn -w 4 -b 0.0.0.0:5000 main:app
+  ```
+- Configure caching for static assets
+- Optimize Docker image size
+- Consider using a CDN for assets
+
+### 📋 Deployment Checklist
+
+- [ ] Test application locally
+- [ ] Create production configuration
+- [ ] Set up environment variables
+- [ ] Configure database (if using one)
+- [ ] Test LaTeX compilation in target environment
+- [ ] Set up monitoring and logging
+- [ ] Configure domain and SSL
+- [ ] Test all features in production
+- [ ] Set up backup strategy for user projects
+
+### 🆘 Deployment Troubleshooting
+
+**Common Issues:**
+
+1. **LaTeX not found**
+   - Ensure LaTeX is installed in the deployment environment
+   - Check PATH configuration
+   - Consider using a pre-built Docker image with LaTeX
+
+2. **File permissions**
+   - Ensure write permissions for output directory
+   - Check user permissions in container
+
+3. **Port configuration**
+   - Use environment variable for port: `port = int(os.environ.get('PORT', 5000))`
+   - Update `app.run(host='0.0.0.0', port=port)`
+
+4. **Memory/timeout limits**
+   - LaTeX compilation can be resource-intensive
+   - Configure appropriate timeout and memory limits
+   - Consider async compilation for large documents
 
 ---
 
