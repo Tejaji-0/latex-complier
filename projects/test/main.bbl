@@ -1,0 +1,13 @@
+\begin{thebibliography}{1}
+
+\bibitem{example2023}
+First Author and Author Second.
+\newblock Example article.
+\newblock {\em Journal Name}, 1(1):1--10, 2023.
+
+\bibitem{sample2024}
+John Smith and Jane Doe.
+\newblock Comprehensive study on latex.
+\newblock {\em Documentation Quarterly}, 15(3):45--67, 2024.
+
+\end{thebibliography}

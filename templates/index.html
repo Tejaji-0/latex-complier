@@ -1,0 +1,1463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Overleaf-Style LaTeX Editor</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/idea.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Light theme colors */
+            --primary-orange: #FF6B35;
+            --light-orange: #FF8C42;
+            --dark-orange: #E85A2B;
+            --accent-orange: #FFB07F;
+            --text-primary: #2F3A3C;
+            --text-secondary: #6C757D;
+            --bg-primary: #FFFFFF;
+            --bg-secondary: #F8F9FA;
+            --bg-tertiary: #F1F3F4;
+            --border-color: #E1E5E9;
+            --hover-color: #FFF4F1;
+            --shadow-color: rgba(0,0,0,0.1);
+        }
+
+        [data-theme="dark"] {
+            /* Dark theme colors */
+            --primary-orange: #FF7F50;
+            --light-orange: #FF9A75;
+            --dark-orange: #E85A2B;
+            --accent-orange: #FFAB85;
+            --text-primary: #E5E7EB;
+            --text-secondary: #9CA3AF;
+            --bg-primary: #1F2937;
+            --bg-secondary: #111827;
+            --bg-tertiary: #374151;
+            --border-color: #4B5563;
+            --hover-color: #2D1B1A;
+            --shadow-color: rgba(0,0,0,0.3);
+        }
+        
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Source Sans Pro', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            margin: 0;
+            overflow: hidden;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        
+        /* Top Navigation Bar */
+        .top-nav {
+            background: var(--primary-orange);
+            color: white;
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 4px var(--shadow-color);
+            z-index: 1000;
+            position: relative;
+        }
+        
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            color: white;
+            text-decoration: none;
+        }
+        
+        .logo:hover {
+            color: white;
+            text-decoration: none;
+        }
+        
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .nav-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            transition: background 0.2s;
+            cursor: pointer;
+        }
+        
+        .nav-btn:hover {
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+        
+        .nav-btn.primary {
+            background: white;
+            color: var(--primary-orange);
+            border: none;
+        }
+        
+        .nav-btn.primary:hover {
+            background: var(--bg-secondary);
+            color: var(--primary-orange);
+        }
+        
+        /* Settings Dropdown */
+        .settings-dropdown {
+            position: relative;
+        }
+        
+        .settings-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .settings-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        
+        .settings-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px 0;
+            min-width: 180px;
+            box-shadow: 0 4px 12px var(--shadow-color);
+            z-index: 1001;
+            margin-top: 4px;
+        }
+        
+        .settings-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+            color: var(--text-primary);
+        }
+        
+        .settings-item:hover {
+            background: var(--hover-color);
+        }
+        
+        .theme-toggle {
+            width: 40px;
+            height: 20px;
+            background: var(--border-color);
+            border-radius: 10px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .theme-toggle.active {
+            background: var(--primary-orange);
+        }
+        
+        .theme-toggle::after {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.3s;
+        }
+        
+        .theme-toggle.active::after {
+            transform: translateX(20px);
+        }
+        
+        /* Main Layout */
+        .main-layout {
+            display: flex;
+            height: calc(100vh - 50px);
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: var(--bg-primary);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .sidebar-section {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .sidebar-section h6 {
+            margin: 0 0 12px 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        /* Project Section */
+        .project-info {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        
+        .project-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+        }
+        
+        .project-actions {
+            display: flex;
+            gap: 4px;
+        }
+        
+        .project-btn {
+            background: none;
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .project-btn:hover {
+            background: var(--hover-color);
+            border-color: var(--primary-orange);
+        }
+        
+        .project-btn.success {
+            background: var(--primary-orange);
+            color: white;
+            border-color: var(--primary-orange);
+        }
+        
+        .project-btn.success:hover {
+            background: var(--dark-orange);
+        }
+        
+        /* File Tree */
+        .file-tree {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 16px 16px 16px;
+        }
+        
+        .file-item {
+            display: flex;
+            align-items: center;
+            padding: 6px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-size: 14px;
+            margin-bottom: 2px;
+        }
+        
+        .file-item:hover {
+            background: var(--hover-color);
+        }
+        
+        .file-item.active {
+            background: var(--primary-orange);
+            color: white;
+        }
+        
+        .file-icon {
+            width: 16px;
+            margin-right: 8px;
+            color: var(--text-secondary);
+        }
+        
+        .file-item.active .file-icon {
+            color: white;
+        }
+        
+        .file-name {
+            flex: 1;
+            font-weight: 400;
+        }
+        
+        .delete-file-btn {
+            opacity: 0;
+            background: none;
+            border: none;
+            color: #dc3545;
+            padding: 2px;
+            border-radius: 2px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            margin-left: 4px;
+        }
+        
+        .file-item:hover .delete-file-btn {
+            opacity: 1;
+        }
+        
+        .file-item.active .delete-file-btn {
+            color: white;
+        }
+        
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-secondary);
+        }
+        
+        .content-area {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+        
+        /* Editor Panel */
+        .editor-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-primary);
+            border-right: 1px solid var(--border-color);
+        }
+        
+        .panel-header {
+            padding: 12px 16px;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .panel-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .panel-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .panel-btn {
+            background: var(--primary-orange);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .panel-btn:hover {
+            background: var(--dark-orange);
+        }
+        
+        .panel-btn.secondary {
+            background: var(--text-secondary);
+        }
+        
+        .panel-btn.secondary:hover {
+            background: #5a6268;
+        }
+        
+        .panel-btn.warning {
+            background: #fd7e14;
+        }
+        
+        .panel-btn.warning:hover {
+            background: #e8690b;
+        }
+        
+        .editor-container {
+            flex: 1;
+            position: relative;
+        }
+        
+        .CodeMirror {
+            height: 100%;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 14px;
+            line-height: 1.4;
+            background: var(--bg-primary) !important;
+            color: var(--text-primary) !important;
+        }
+        
+        .CodeMirror .CodeMirror-gutters {
+            background: var(--bg-tertiary) !important;
+            border-right: 1px solid var(--border-color) !important;
+        }
+        
+        .CodeMirror .CodeMirror-linenumber {
+            color: var(--text-secondary) !important;
+        }
+        
+        /* Preview Panel */
+        .preview-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-primary);
+        }
+        
+        .preview-container {
+            flex: 1;
+            overflow: auto;
+            background: var(--bg-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        
+        .preview-image {
+            max-width: 90%;
+            max-height: 90%;
+            box-shadow: 0 4px 20px var(--shadow-color);
+            border-radius: 4px;
+        }
+        
+        .preview-placeholder {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 16px;
+        }
+        
+        .preview-placeholder i {
+            color: var(--text-secondary) !important;
+        }
+        
+        .loading-spinner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: var(--text-primary);
+        }
+        
+        /* AI Assistant */
+        .ai-assistant {
+            background: var(--accent-orange);
+            border: 1px solid var(--light-orange);
+            border-radius: 4px;
+            margin-top: 12px;
+        }
+        
+        [data-theme="dark"] .ai-assistant {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+        }
+        
+        .ai-header {
+            padding: 8px 12px;
+            background: var(--accent-orange);
+            border-bottom: 1px solid var(--light-orange);
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--dark-orange);
+        }
+        
+        [data-theme="dark"] .ai-header {
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+        
+        .ai-content {
+            padding: 12px;
+        }
+        
+        .ai-status {
+            font-size: 12px;
+            margin-bottom: 8px;
+        }
+        
+        .ai-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+        
+        .ai-btn {
+            background: var(--primary-orange);
+            color: white;
+            border: none;
+            padding: 6px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .ai-btn:hover {
+            background: var(--dark-orange);
+        }
+        
+        .ai-input-group {
+            display: flex;
+            gap: 4px;
+        }
+        
+        .ai-input {
+            flex: 1;
+            padding: 4px 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 12px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        
+        .ai-panel {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 8px;
+            margin-top: 8px;
+            font-size: 12px;
+            max-height: 150px;
+            overflow-y: auto;
+            color: var(--text-primary);
+        }
+        
+        /* Modals */
+        .modal-content {
+            border-radius: 8px;
+            border: none;
+            box-shadow: 0 10px 30px var(--shadow-color);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        
+        .modal-header {
+            background: var(--primary-orange);
+            color: white;
+            border-bottom: none;
+            border-radius: 8px 8px 0 0;
+        }
+        
+        .modal-title {
+            font-weight: 600;
+        }
+        
+        .btn-close {
+            filter: invert(1);
+        }
+        
+        .modal-body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        
+        .modal-footer {
+            background: var(--bg-primary);
+            border-top: 1px solid var(--border-color);
+        }
+        
+        /* Form Controls */
+        .form-control, .form-select {
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            font-size: 14px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-orange);
+            box-shadow: 0 0 0 0.2rem rgba(255, 107, 53, 0.25);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        
+        /* Alerts */
+        .alert {
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        /* Alert Container */
+        .alert-container {
+            position: fixed;
+            top: 60px;
+            right: 20px;
+            z-index: 1050;
+            max-width: 400px;
+        }
+        
+        /* Bootstrap Button Overrides */
+        .btn-primary {
+            background-color: var(--primary-orange);
+            border-color: var(--primary-orange);
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--dark-orange);
+            border-color: var(--dark-orange);
+        }
+        
+        .btn-secondary {
+            background-color: var(--text-secondary);
+            border-color: var(--text-secondary);
+        }
+        
+        .btn-secondary:hover {
+            background-color: #5a6268;
+            border-color: #545b62;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 250px;
+            }
+            
+            .content-area {
+                flex-direction: column;
+            }
+            
+            .editor-panel, .preview-panel {
+                flex: none;
+                height: 50vh;
+            }
+            
+            .nav-actions {
+                gap: 8px;
+            }
+            
+            .nav-btn {
+                padding: 4px 8px;
+                font-size: 12px;
+            }
+        }
+        
+        /* Hidden utility */
+        .d-none {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Navigation -->
+    <div class="top-nav">
+        <a href="/" class="logo">
+            <i class="fas fa-leaf"></i> LaTeX Editor
+        </a>
+        <div class="nav-actions">
+            <button id="downloadProjectBtn" class="nav-btn">
+                <i class="fas fa-download"></i> Download ZIP
+            </button>
+            <button id="newProjectBtn" class="nav-btn primary">
+                <i class="fas fa-plus"></i> New Project
+            </button>
+            <div class="settings-dropdown">
+                <button id="settingsBtn" class="settings-btn">
+                    <i class="fas fa-cog"></i>
+                </button>
+                <div id="settingsMenu" class="settings-menu d-none">
+                    <div class="settings-item">
+                        <span><i class="fas fa-moon"></i> Dark Mode</span>
+                        <div id="themeToggle" class="theme-toggle"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Layout -->
+    <div class="main-layout">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <!-- Project Section -->
+            <div class="sidebar-section">
+                <div class="project-info">
+                    <h3 class="project-title">{{ current_project }}</h3>
+                    <div class="project-actions">
+                        <button id="deleteProjectBtn" class="project-btn" title="Delete Project">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <select id="projectSelect" class="form-select" title="Select Project">
+                    {% for project in projects %}
+                    <option value="{{ project }}" {% if project == current_project %}selected{% endif %}>
+                        {{ project }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Files Section -->
+            <div class="sidebar-section">
+                <h6>Files</h6>
+                <button id="newFileBtn" class="project-btn success w-100">
+                    <i class="fas fa-file-plus"></i> New File
+                </button>
+            </div>
+
+            <!-- File Tree -->
+            <div class="file-tree">
+                {% for file in project_files %}
+                <div class="file-item" data-path="{{ file.path }}">
+                    <i class="fas fa-file-{% if file.type == 'tex' %}code{% elif file.type == 'bib' %}book{% else %}alt{% endif %} file-icon"></i>
+                    <span class="file-name">{{ file.name }}</span>
+                    {% if file.name != 'main.tex' %}
+                    <button class="delete-file-btn" onclick="showDeleteFileModal('{{ file.path }}')" title="Delete file">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- AI Assistant -->
+            <div class="ai-assistant">
+                <div class="ai-header">
+                    <i class="fas fa-robot"></i> AI Assistant
+                </div>
+                <div class="ai-content">
+                    <div id="aiStatus" class="ai-status">
+                        <small class="text-muted">Checking AI status...</small>
+                    </div>
+                    <div class="ai-buttons">
+                        <button class="ai-btn" data-action="improve">
+                            <i class="fas fa-magic"></i> Improve
+                        </button>
+                        <button class="ai-btn" data-action="fix">
+                            <i class="fas fa-wrench"></i> Fix Errors
+                        </button>
+                        <button class="ai-btn" data-action="explain">
+                            <i class="fas fa-question"></i> Explain
+                        </button>
+                        <button class="ai-btn" data-action="generate">
+                            <i class="fas fa-sparkles"></i> Generate
+                        </button>
+                    </div>
+                    
+                    <div class="ai-input-group">
+                        <input type="text" id="aiPrompt" class="ai-input" placeholder="Ask AI to generate...">
+                        <button id="generateBtn" class="ai-btn">Go</button>
+                    </div>
+                    
+                    <div id="aiResponse" class="ai-panel d-none">
+                        <div id="aiResponseContent"></div>
+                        <div class="mt-2 d-none" id="aiActions">
+                            <button class="project-btn success" id="applyAiBtn">Apply</button>
+                            <button class="project-btn" id="closeAiBtn">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="content-area">
+                <!-- Editor Panel -->
+                <div class="editor-panel">
+                    <div class="panel-header">
+                        <h6 class="panel-title">
+                            <i class="fas fa-file-code"></i>
+                            {{ current_file }}
+                        </h6>
+                        <div class="panel-actions">
+                            <button id="saveBtn" class="panel-btn warning">
+                                <i class="fas fa-save"></i> Save
+                            </button>
+                            <button id="compileBtn" class="panel-btn">
+                                <i class="fas fa-play"></i> Recompile
+                            </button>
+                        </div>
+                    </div>
+                    <div class="editor-container">
+                        <textarea id="latexEditor" title="LaTeX Editor" placeholder="Start typing your LaTeX code...">{{ file_content }}</textarea>
+                    </div>
+                </div>
+
+                <!-- Preview Panel -->
+                <div class="preview-panel">
+                    <div class="panel-header">
+                        <h6 class="panel-title">
+                            <i class="fas fa-file-pdf"></i>
+                            PDF Preview
+                        </h6>
+                        <div class="panel-actions">
+                            <button id="downloadBtn" class="panel-btn secondary" disabled>
+                                <i class="fas fa-download"></i> Download PDF
+                            </button>
+                        </div>
+                    </div>
+                    <div class="preview-container">
+                        <div id="previewContent" class="preview-placeholder">
+                            <i class="fas fa-file-pdf fa-3x mb-3"></i>
+                            <p>Click "Recompile" to generate PDF preview</p>
+                        </div>
+                        <div id="loadingSpinner" class="loading-spinner d-none">
+                            <div class="spinner-border text-success" role="status">
+                                <span class="visually-hidden">Compiling...</span>
+                            </div>
+                            <p class="mt-2">Compiling LaTeX...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status Messages -->
+            <div id="alertContainer" class="alert-container"></div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <!-- New Project Modal -->
+    <div class="modal fade" id="newProjectModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Create New Project</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="projectName" class="form-label">Project Name</label>
+                        <input type="text" class="form-control" id="projectName" placeholder="my-latex-project">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="createProjectBtn">Create</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New File Modal -->
+    <div class="modal fade" id="newFileModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Create New File</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="fileName" class="form-label">File Name</label>
+                        <input type="text" class="form-control" id="fileName" placeholder="chapter1">
+                    </div>
+                    <div class="mb-3">
+                        <label for="fileType" class="form-label">File Type</label>
+                        <select class="form-select" id="fileType">
+                            <option value="tex">LaTeX (.tex)</option>
+                            <option value="bib">Bibliography (.bib)</option>
+                            <option value="cls">Class (.cls)</option>
+                            <option value="sty">Style (.sty)</option>
+                            <option value="txt">Text (.txt)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="createFileBtn">Create</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Project Confirmation Modal -->
+    <div class="modal fade" id="deleteProjectModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Delete Project</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the project "<span id="deleteProjectName"></span>"?</p>
+                    <p class="text-danger"><strong>Warning:</strong> This action cannot be undone. All files in this project will be permanently deleted.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteProjectBtn">Delete Project</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete File Confirmation Modal -->
+    <div class="modal fade" id="deleteFileModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Delete File</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the file "<span id="deleteFileName"></span>"?</p>
+                    <p class="text-warning"><strong>Warning:</strong> This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteFileBtn">Delete File</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/stex/stex.min.js"></script>
+    
+    <script>
+        // Global variables
+        let editor;
+        let currentProject = '{{ current_project }}';
+        let currentFile = '{{ current_file }}';
+        
+        // Initialize CodeMirror
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            
+            editor = CodeMirror.fromTextArea(document.getElementById('latexEditor'), {
+                mode: 'stex',
+                theme: currentTheme === 'dark' ? 'dracula' : 'default',
+                lineNumbers: true,
+                lineWrapping: true,
+                indentUnit: 2,
+                tabSize: 2,
+                autoCloseBrackets: true,
+                matchBrackets: true,
+                extraKeys: {
+                    "Ctrl-Space": "autocomplete",
+                    "Ctrl-Enter": function() { compileLatex(); },
+                    "Ctrl-S": function() { saveFile(); }
+                }
+            });
+            
+            initializeEventListeners();
+            checkAiStatus(); // Check AI status on load
+        });
+        
+        function initializeEventListeners() {
+            // Theme and settings
+            document.getElementById('settingsBtn').addEventListener('click', toggleSettingsMenu);
+            document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+            
+            // Close settings menu when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.settings-dropdown')) {
+                    document.getElementById('settingsMenu').classList.add('d-none');
+                }
+            });
+            
+            // Project management
+            document.getElementById('projectSelect').addEventListener('change', switchProject);
+            document.getElementById('newProjectBtn').addEventListener('click', () => {
+                new bootstrap.Modal(document.getElementById('newProjectModal')).show();
+            });
+            document.getElementById('createProjectBtn').addEventListener('click', createProject);
+            document.getElementById('downloadProjectBtn').addEventListener('click', downloadProject);
+            document.getElementById('deleteProjectBtn').addEventListener('click', showDeleteProjectModal);
+            document.getElementById('confirmDeleteProjectBtn').addEventListener('click', deleteProject);
+            
+            // File management
+            document.getElementById('newFileBtn').addEventListener('click', () => {
+                new bootstrap.Modal(document.getElementById('newFileModal')).show();
+            });
+            document.getElementById('createFileBtn').addEventListener('click', createFile);
+            document.getElementById('confirmDeleteFileBtn').addEventListener('click', deleteFile);
+            
+            // Toolbar actions
+            document.getElementById('compileBtn').addEventListener('click', compileLatex);
+            document.getElementById('downloadBtn').addEventListener('click', downloadPDF);
+            document.getElementById('saveBtn').addEventListener('click', saveFile);
+            
+            // AI Assistant
+            document.querySelectorAll('.ai-btn[data-action]').forEach(btn => {
+                btn.addEventListener('click', (e) => aiAssist(e.target.dataset.action));
+            });
+            document.getElementById('generateBtn').addEventListener('click', () => {
+                const prompt = document.getElementById('aiPrompt').value;
+                if (prompt) aiAssist('generate', prompt);
+            });
+            document.getElementById('applyAiBtn').addEventListener('click', applyAiResponse);
+            document.getElementById('closeAiBtn').addEventListener('click', closeAiResponse);
+            
+            // File tree
+            document.querySelectorAll('.file-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    if (!e.target.closest('.delete-file-btn')) {
+                        loadFile(item.dataset.path);
+                    }
+                });
+            });
+        }
+        
+        async function checkAiStatus() {
+            try {
+                const response = await fetch('/api/ollama/status');
+                const result = await response.json();
+                const statusElement = document.getElementById('aiStatus');
+                
+                if (result.status === 'available') {
+                    statusElement.innerHTML = `<small class="text-success"><i class="fas fa-check-circle"></i> AI Ready (${result.models.length} models)</small>`;
+                    // Enable AI buttons
+                    document.querySelectorAll('.ai-btn').forEach(btn => btn.disabled = false);
+                } else {
+                    statusElement.innerHTML = `<small class="text-warning"><i class="fas fa-exclamation-triangle"></i> AI Unavailable</small>`;
+                    // Disable AI buttons but show helpful message
+                    document.querySelectorAll('.ai-btn').forEach(btn => {
+                        btn.disabled = true;
+                        btn.title = 'Install Ollama and pull a model to use AI features';
+                    });
+                }
+            } catch (error) {
+                const statusElement = document.getElementById('aiStatus');
+                statusElement.innerHTML = `<small class="text-danger"><i class="fas fa-times-circle"></i> AI Error</small>`;
+                document.querySelectorAll('.ai-btn').forEach(btn => btn.disabled = true);
+            }
+        }
+        
+        function showAlert(message, type = 'info') {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.getElementById('alertContainer').appendChild(alertDiv);
+            
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
+        }
+        
+        function switchProject() {
+            const newProject = document.getElementById('projectSelect').value;
+            window.location.href = `/?project=${newProject}`;
+        }
+        
+        async function createProject() {
+            const projectName = document.getElementById('projectName').value.trim();
+            if (!projectName) {
+                showAlert('Please enter a project name', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/projects', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: projectName })
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    window.location.href = `/?project=${result.project}`;
+                } else {
+                    showAlert(result.error, 'danger');
+                }
+            } catch (error) {
+                showAlert('Error creating project', 'danger');
+            }
+            
+            bootstrap.Modal.getInstance(document.getElementById('newProjectModal')).hide();
+        }
+        
+        async function createFile() {
+            const fileName = document.getElementById('fileName').value.trim();
+            const fileType = document.getElementById('fileType').value;
+            
+            if (!fileName) {
+                showAlert('Please enter a file name', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/projects/${currentProject}/files/new`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path: fileName, type: fileType })
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    window.location.href = `/?project=${currentProject}&file=${result.file_path}`;
+                } else {
+                    showAlert(result.error, 'danger');
+                }
+            } catch (error) {
+                showAlert('Error creating file', 'danger');
+            }
+            
+            bootstrap.Modal.getInstance(document.getElementById('newFileModal')).hide();
+        }
+        
+        async function loadFile(filePath) {
+            try {
+                const response = await fetch(`/api/projects/${currentProject}/files/${filePath}`);
+                const result = await response.json();
+                
+                editor.setValue(result.content);
+                currentFile = filePath;
+                
+                // Update panel title
+                const panelTitle = document.querySelector('.editor-panel .panel-title');
+                panelTitle.innerHTML = `<i class="fas fa-file-code"></i> ${filePath}`;
+                
+                // Update active file in tree
+                document.querySelectorAll('.file-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+                document.querySelector(`[data-path="${filePath}"]`).classList.add('active');
+                
+            } catch (error) {
+                showAlert('Error loading file', 'danger');
+            }
+        }
+        
+        async function saveFile() {
+            try {
+                const response = await fetch(`/api/projects/${currentProject}/files/${currentFile}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: editor.getValue() })
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    showAlert('File saved successfully', 'success');
+                } else {
+                    showAlert(result.error, 'danger');
+                }
+            } catch (error) {
+                showAlert('Error saving file', 'danger');
+            }
+        }
+        
+        async function compileLatex() {
+            const content = editor.getValue();
+            
+            if (!content.trim()) {
+                showAlert('Please enter some LaTeX code first.', 'warning');
+                return;
+            }
+
+            showLoading();
+
+            try {
+                const response = await fetch('/compile', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        project: currentProject,
+                        file: currentFile,
+                        content: content
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    document.getElementById('previewContent').innerHTML = `
+                        <img src="data:image/png;base64,${result.preview}" 
+                             class="preview-image" 
+                             alt="PDF Preview">
+                    `;
+                    document.getElementById('downloadBtn').disabled = false;
+                    showAlert(result.message, 'success');
+                } else {
+                    document.getElementById('previewContent').innerHTML = `
+                        <div class="text-danger">
+                            <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+                            <h6>Compilation Error</h6>
+                            <div class="error-message" style="font-family: monospace; font-size: 12px; white-space: pre-wrap; max-height: 200px; overflow-y: auto;">${result.error}</div>
+                        </div>
+                    `;
+                    document.getElementById('downloadBtn').disabled = true;
+                    showAlert('Compilation failed. Check the error details in the preview panel.', 'danger');
+                }
+            } catch (error) {
+                document.getElementById('previewContent').innerHTML = `
+                    <div class="text-danger">
+                        <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+                        <p>Network error occurred. Please try again.</p>
+                    </div>
+                `;
+                document.getElementById('downloadBtn').disabled = true;
+                showAlert('Network error. Please check your connection and try again.', 'danger');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        function downloadPDF() {
+            const pdfName = currentFile.replace('.tex', '.pdf');
+            window.location.href = `/download/${currentProject}/${pdfName}`;
+        }
+        
+        function downloadProject() {
+            window.location.href = `/download/project/${currentProject}`;
+        }
+        
+        function showDeleteProjectModal() {
+            const projects = Array.from(document.getElementById('projectSelect').options).map(opt => opt.value);
+            if (projects.length <= 1) {
+                showAlert('Cannot delete the last project. Create another project first.', 'warning');
+                return;
+            }
+            
+            document.getElementById('deleteProjectName').textContent = currentProject;
+            new bootstrap.Modal(document.getElementById('deleteProjectModal')).show();
+        }
+        
+        async function deleteProject() {
+            try {
+                const response = await fetch(`/api/projects/${currentProject}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    showAlert('Project deleted successfully', 'success');
+                    // Redirect to another project
+                    window.location.href = '/';
+                } else {
+                    showAlert(result.error, 'danger');
+                }
+            } catch (error) {
+                showAlert('Error deleting project', 'danger');
+            }
+            
+            bootstrap.Modal.getInstance(document.getElementById('deleteProjectModal')).hide();
+        }
+        
+        function showDeleteFileModal(filePath) {
+            if (filePath === 'main.tex') {
+                showAlert('Cannot delete main.tex file. This is the primary project file.', 'warning');
+                return;
+            }
+            
+            document.getElementById('deleteFileName').textContent = filePath;
+            window.fileToDelete = filePath;
+            new bootstrap.Modal(document.getElementById('deleteFileModal')).show();
+        }
+        
+        async function deleteFile() {
+            const filePath = window.fileToDelete;
+            if (!filePath) return;
+            
+            try {
+                const response = await fetch(`/api/projects/${currentProject}/files/${filePath}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    showAlert('File deleted successfully', 'success');
+                    // If we're currently viewing the deleted file, switch to main.tex
+                    if (currentFile === filePath) {
+                        window.location.href = `/?project=${currentProject}&file=main.tex`;
+                    } else {
+                        // Refresh the page to update file list
+                        window.location.reload();
+                    }
+                } else {
+                    showAlert(result.error, 'danger');
+                }
+            } catch (error) {
+                showAlert('Error deleting file', 'danger');
+            }
+            
+            bootstrap.Modal.getInstance(document.getElementById('deleteFileModal')).hide();
+            delete window.fileToDelete;
+        }
+        
+        async function aiAssist(action, customPrompt = null) {
+            const code = editor.getValue();
+            const prompt = customPrompt || code;
+            
+            if (!prompt.trim()) {
+                showAlert('Please provide some code or prompt for AI assistance', 'warning');
+                return;
+            }
+            
+            const aiResponse = document.getElementById('aiResponse');
+            const aiResponseContent = document.getElementById('aiResponseContent');
+            const aiActions = document.getElementById('aiActions');
+            
+            aiResponse.classList.remove('d-none');
+            aiResponseContent.innerHTML = '<i class="fas fa-spinner fa-spin"></i> AI is thinking...';
+            aiActions.classList.add('d-none');
+            
+            try {
+                const response = await fetch('/api/ollama/assist', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        code: prompt,
+                        type: action
+                    })
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    if (action === 'explain') {
+                        aiResponseContent.innerHTML = `<strong>AI Explanation:</strong><br><div style="white-space: pre-wrap;">${result.response}</div>`;
+                        aiActions.classList.add('d-none');
+                    } else {
+                        window.lastAiResponse = result.response; // Store for apply function
+                        aiResponseContent.innerHTML = `
+                            <strong>AI Suggestion:</strong> <small class="text-muted">(using ${result.model_used})</small><br>
+                            <pre style="background: white; padding: 10px; border-radius: 3px; font-size: 11px; max-height: 200px; overflow-y: auto;">${escapeHtml(result.response)}</pre>
+                        `;
+                        aiActions.classList.remove('d-none');
+                    }
+                } else {
+                    aiResponseContent.innerHTML = `<span class="text-danger"><i class="fas fa-exclamation-triangle"></i> ${result.error}</span>`;
+                    aiActions.classList.add('d-none');
+                    
+                    // Show setup instructions if Ollama is not available
+                    if (result.error.includes('Ollama service')) {
+                        aiResponseContent.innerHTML += `
+                            <hr>
+                            <small>
+                                <strong>To set up AI features:</strong><br>
+                                1. Install Ollama: <a href="https://ollama.ai" target="_blank">https://ollama.ai</a><br>
+                                2. Run: <code>ollama pull codellama</code><br>
+                                3. Start Ollama service<br>
+                                4. Refresh this page
+                            </small>
+                        `;
+                    }
+                }
+            } catch (error) {
+                aiResponseContent.innerHTML = '<span class="text-danger">Network error. Please try again.</span>';
+                aiActions.classList.add('d-none');
+            }
+        }
+        
+        function applyAiResponse() {
+            if (window.lastAiResponse) {
+                editor.setValue(window.lastAiResponse);
+                showAlert('AI suggestion applied', 'success');
+                closeAiResponse();
+            }
+        }
+        
+        function closeAiResponse() {
+            document.getElementById('aiResponse').classList.add('d-none');
+            delete window.lastAiResponse;
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function showLoading() {
+            document.getElementById('previewContent').classList.add('d-none');
+            document.getElementById('loadingSpinner').classList.remove('d-none');
+            document.getElementById('compileBtn').disabled = true;
+            document.getElementById('compileBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Compiling...';
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingSpinner').classList.add('d-none');
+            document.getElementById('previewContent').classList.remove('d-none');
+            document.getElementById('compileBtn').disabled = false;
+            document.getElementById('compileBtn').innerHTML = '<i class="fas fa-play"></i> Recompile';
+        }
+        
+        function toggleSettingsMenu() {
+            const menu = document.getElementById('settingsMenu');
+            menu.classList.toggle('d-none');
+        }
+        
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            document.documentElement.setAttribute('data-theme', newTheme);
+            document.getElementById('themeToggle').classList.toggle('active');
+            
+            // Save theme preference
+            localStorage.setItem('theme', newTheme);
+            
+            // Update editor theme
+            if (editor) {
+                editor.setOption('theme', newTheme === 'dark' ? 'dracula' : 'default');
+            }
+        }
+        
+        function initializeTheme() {
+            // Load saved theme or default to light
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            
+            if (savedTheme === 'dark') {
+                document.getElementById('themeToggle').classList.add('active');
+            }
+        }
+        
+        // Initialize theme before DOM content loads
+        initializeTheme();
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'Enter') {
+                e.preventDefault();
+                compileLatex();
+            } else if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                saveFile();
+            }
+        });
+    </script>
+</body>
+</html>
